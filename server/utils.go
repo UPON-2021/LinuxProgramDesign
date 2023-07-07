@@ -29,39 +29,36 @@ func LoginHandler(conn net.Conn) (string, error) {
 }
 
 func WriteMsgToClient(clnt Client, conn net.Conn) {
-	for msg := range clnt.Messages {
-		conn.Write(msg)
+	for {
+		for msg := range clnt.Messages {
+			fmt.Println("WriteMsgToClient:", clnt.Addr, clnt.Name, string(msg))
+			conn.Write(msg)
+		}
 	}
 }
 
 func MsgManager() {
 	for {
+		fmt.Println("MsgManager: waiting for data")
 		msg := <-message
+		fmt.Println("MsgManager", msg)
 		for _, clnt := range onlineMap {
 			clnt.Messages <- msg
 		}
 	}
 }
 
-func UserMsgHandler(clnt Client, conn net.Conn) {
-	hasData := make(chan bool) // 检测用户是否有消息发送
+func UserMsgHandler(clnt Client, conn net.Conn, hasData chan bool) {
+	// 检测用户是否有消息发送
 	buf := make([]byte, 2048)
 	for {
+		fmt.Println("UserMsgHandler: waiting for data")
 		n, err := conn.Read(buf)
 		if err != nil {
-			panic(err)
+			return
 		}
+		fmt.Println("UserMsgHandler:", buf[:n])
 		message <- buf[:n]
 		hasData <- true
 	}
-	//for {
-	//	select {
-	//	case <-hasData:
-	//	case <-time.After(60 * time.Second):
-	//		msg, _ := protocol.MakeMsg("[Server]", clnt.Name+" time out leave")
-	//		message <- msg
-	//		conn.Write(TIMEOUT_MESSAGE()) // 通知当前用户断开连接
-	//		return                        // 结束当前应用
-	//	}
-	//}
 }
