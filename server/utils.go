@@ -37,25 +37,35 @@ func WriteMsgToClient(clnt Client, conn net.Conn) {
 	}
 }
 
-func MsgManager() {
+// 摆烂了，不写了
+func LogOutHandler(clnt Client, onlinemap map[string]Client) {
+	delete(onlinemap, clnt.Name)
+
+	message <- []byte(clnt.Name + " logout")
+}
+
+func MsgManager(onlineMap onlineMap) {
 	for {
+
 		fmt.Println("MsgManager: waiting for data")
 		msg := <-message
 		fmt.Println("MsgManager", msg)
-		for _, clnt := range onlineMap {
+		for _, clnt := range onlineMap.Clients {
 			clnt.Messages <- msg
 		}
 	}
 }
 
-func UserMsgHandler(clnt Client, conn net.Conn, hasData chan bool) {
+func UserMsgHandler(clnt Client, conn net.Conn, hasData chan bool, isLost chan bool) {
 	// 检测用户是否有消息发送
 	buf := make([]byte, 2048)
 	for {
 		fmt.Println("UserMsgHandler: waiting for data")
 		n, err := conn.Read(buf)
 		if err != nil {
+			isLost <- true
 			return
+
 		}
 		fmt.Println("UserMsgHandler:", buf[:n])
 		message <- buf[:n]
