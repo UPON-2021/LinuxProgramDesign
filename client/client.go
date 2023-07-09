@@ -37,7 +37,8 @@ func LoginClient(conn net.Conn) {
 }
 
 func Run() {
-	InitClient()
+	Display()
+	//InitClient()
 
 	// input host and port
 

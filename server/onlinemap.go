@@ -2,7 +2,7 @@ package server
 
 import "sync"
 
-// 定义全局 map 存储在线用户 key:username, value: Client 涉及到并发，带锁，做到线程安全的
+// 定义全局 map 存储在线用户 key:username, value: Client 涉及到并发，带锁，做到线程安全
 type onlineMap struct {
 	Clients map[string]Client
 	Mutex   sync.Mutex
