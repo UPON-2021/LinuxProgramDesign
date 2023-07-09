@@ -1,14 +1,18 @@
 package client
 
 import (
+	"fmt"
 	"github.com/nsf/termbox-go"
-	"strings"
 )
 
+// 实现难度过大，废弃
+
 type InputBuf struct {
+	//多线程读取用户输入，上锁处理
 	Content string
 }
 
+// TODO 实现客户端消息展示功能
 func Display() {
 	err := termbox.Init()
 	if err != nil {
@@ -20,33 +24,54 @@ func Display() {
 		Content: "",
 	}
 
+	// 创建一个管道用于接收消息
 	messageReceiveChan := make(chan string)
-	userInputChan := make(chan string)
+	messageInputChan := make(chan string)
+	//messageInputBufChan := make(chan string)
 
-	go receiveMessages(messageReceiveChan, userInputChan)
-	go userInput(userInputChan, &inputBuf)
+	go receiveMessages(messageReceiveChan, messageInputChan) // 启动协程接收消息
+	go userInput(messageInputChan, &inputBuf)                // 启动协程接收用户输入
+	//go getUserInput(messageInputChan, reader) // 启动协程接收用户输入
+
+	//for {
+	//	drawUI(messageReceiveChan, &inputBuf) // 绘制UI界面
+	//}
 
 	for {
-		drawUI(messageReceiveChan, &inputBuf)
+		//fmt.Println(inputBuf.Content)
+		drawInputBox(&inputBuf, 1, 1, 50)
 	}
 }
 
-func receiveMessages(messages chan<- string, userInputChan <-chan string) {
-	for message := range userInputChan {
+func receiveMessages(messages chan<- string, messageInputChan <-chan string) {
+	//for message := range messageInputChan {
+	//	messages <- message
+	//}
+	//这里模拟接收消息的过程，可以根据实际需求进行修改
+	for i := 1; ; i++ {
+		message := fmt.Sprintf("This is receive %d ", i)
+		//messages <- message
 		messages <- message
 	}
 }
 
 func drawUI(recv <-chan string, inp *InputBuf) {
-	_, height := termbox.Size()
-
-	dividerPos := height / 2
-
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 
-	drawMessages(recv, 0, 0, dividerPos-1)
-	drawInputBox(inp, 0, dividerPos+1, height)
+	width, height := termbox.Size()
 
+	// 计算分割线的位置
+	dividerPos := height / 2
+
+	// 绘制分割线
+	for x := 0; x < width; x++ {
+		termbox.SetCell(x, dividerPos, '-', termbox.ColorDefault, termbox.ColorDefault)
+	}
+
+	drawMessages(recv, 50, 0, dividerPos-1)
+	//// 绘制消息
+	//go drawMessages(inp, 0, dividerPos+1, height)
+	//drawInputBox(inp, 0, dividerPos+1, height)
 	termbox.Flush()
 }
 
@@ -54,48 +79,51 @@ func drawMessages(messages <-chan string, startX, startY, endY int) {
 	x, y := startX, startY
 
 	for message := range messages {
-		lines := strings.Split(message, "\n")
 
-		for _, line := range lines {
-			for _, ch := range line {
-				termbox.SetCell(x, y, ch, termbox.ColorDefault, termbox.ColorDefault)
-				x++
-			}
-
-			x = startX
-			y++
-
-			if y >= endY {
-				break
-			}
-		}
-	}
-}
-
-func drawInputBox(inpBuf *InputBuf, startX, startY, endY int) {
-	x, y := startX, startY
-
-	for _, ch := range inpBuf.Content {
-		termbox.SetCell(x, y, ch, termbox.ColorDefault, termbox.ColorDefault)
-		x++
-
-		x1, _ := termbox.Size()
-		if x >= x1 {
-			x = startX
-			y++
+		for _, ch := range message {
+			termbox.SetCell(x, y, ch, termbox.ColorDefault, termbox.ColorDefault)
+			x++
 		}
 
+		// 换行
+		x = startX
+		y++
+
+		// 如果超出终端上方区域，停止绘制
 		if y >= endY {
 			break
 		}
 	}
 }
 
-func userInput(userInputChan chan<- string, inputbuf *InputBuf) {
+func drawInputBox(inpBuf *InputBuf, startX, startY, endY int) {
+	//fmt.Println(inpBuf.Content)
+	x, y := startX, startY
+	message := inpBuf.Content
+
+	for _, ch := range message {
+		termbox.SetCell(x, y, ch, termbox.ColorDefault, termbox.ColorDefault)
+		x++
+
+		// 换行
+		x = startX
+		y++
+
+		// 如果超出终端上方区域，停止绘制
+		if y >= endY {
+			break
+		}
+	}
+	termbox.Flush()
+}
+
+func userInput(inpText chan string, inputbuf *InputBuf) {
+
 	inputText := inputbuf.Content
 
 mainLoop:
 	for {
+
 		switch ev := termbox.PollEvent(); ev.Type {
 		case termbox.EventKey:
 			switch ev.Key {
@@ -108,9 +136,10 @@ mainLoop:
 			case termbox.KeySpace:
 				inputText += " "
 			case termbox.KeyEnter:
-				userInputChan <- inputText
 				inputbuf.Content = ""
 				inputText = ""
+				//inpText <- inputText
+
 			default:
 				if ev.Ch != 0 {
 					inputText += string(ev.Ch)
