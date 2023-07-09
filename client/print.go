@@ -26,3 +26,10 @@ func PrintServerMessage(message string) {
 func PrintError(err error) {
 	fmt.Println("[* Error ]", err)
 }
+
+func PrintHelp() {
+	fmt.Println("/exit")
+	fmt.Println("/help")
+	fmt.Println("/all <message>")
+	fmt.Println("/to <username> <message>")
+}

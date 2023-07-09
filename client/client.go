@@ -56,7 +56,7 @@ func LoginClient(conn net.Conn) (string, error) {
 	return name, nil
 }
 
-func MessageLinster(conn net.Conn, username string) {
+func MessageLinster(conn net.Conn, username string, isDisconnect chan bool) {
 	buf := make([]byte, 2048)
 	for {
 		n, err := conn.Read(buf)
@@ -68,7 +68,7 @@ func MessageLinster(conn net.Conn, username string) {
 			continue
 		}
 		fmt.Println("[Debug] -> MessageLinster", string(buf[:n]))
-		error := MessageHandler(buf[:n], username)
+		error := MessageHandler(buf[:n], username, isDisconnect)
 		if error != nil {
 			PrintError(error)
 			//fmt.Println(error)
@@ -76,7 +76,7 @@ func MessageLinster(conn net.Conn, username string) {
 	}
 }
 
-func MessageHandler(msg []byte, username string) error {
+func MessageHandler(msg []byte, username string, isDisconnect chan bool) error {
 	var serverMessage protocol.SercetMessage
 	var message protocol.Message
 	error := protocol.UnserializeData(msg, &message)
@@ -85,6 +85,10 @@ func MessageHandler(msg []byte, username string) error {
 	}
 	if message.Username == "Server" {
 		PrintServerMessage(message.Content)
+		if message.Content == "Timeout!" {
+			isDisconnect <- true
+			return nil
+		}
 		return nil
 	}
 	error = protocol.UnserializeData(msg, &serverMessage)
@@ -105,16 +109,57 @@ func MessageHandler(msg []byte, username string) error {
 	return nil
 }
 
+func SendMessageHandler(conn net.Conn, username string, isDisconnect chan bool) {
+	for {
+
+		var cmd, target string
+
+		fmt.Scanf("%s%s", &cmd, &target)
+		c := cmd
+		t := target
+		//fmt.Println(c, "||", t)
+		//c, t, _ := parseString(cmd)
+
+		switch c {
+		case "": // wtf
+			break
+		case "/help":
+			PrintHelp()
+			break
+		case "/all":
+			fmt.Println("Send message to all", t)
+			SendAllMessage()
+			break
+		case "/to":
+			fmt.Println("Send message to", t)
+			break
+		case "/exit":
+			fmt.Println("Bye!")
+			isDisconnect <- true
+			break
+		default:
+			PrintHelp()
+			break
+		}
+
+	}
+}
+
 func Run() {
 
-	conn := InitClient()
-	username, err := LoginClient(conn)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("Login successfully, welcome", username)
-	go MessageLinster(conn, username)
+	isDisconnect := make(chan bool)
+	//	conn := InitClient()
+	//username, err := LoginClient(conn)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//fmt.Println("Login successfully, welcome", username)
+	//go MessageLinster(conn, username, isDisconnect)
 
 	// input host and port
+	go SendMessageHandler(isDisconnect)
+	for <-isDisconnect != true {
+		break
+	}
 
 }
