@@ -112,26 +112,27 @@ func MessageHandler(msg []byte, username string, isDisconnect chan bool) error {
 func SendMessageHandler(conn net.Conn, username string, isDisconnect chan bool) {
 	for {
 
-		var cmd, target string
+		var cmd, target, message string
 
-		fmt.Scanf("%s%s", &cmd, &target)
+		fmt.Scanf("%s%s%s", &cmd, &target, &message)
 		c := cmd
 		t := target
 		//fmt.Println(c, "||", t)
 		//c, t, _ := parseString(cmd)
 
 		switch c {
-		case "": // wtf
+		case "": // 奇异的bug，不知如何产生的，就这么简单修修吧(
 			break
 		case "/help":
 			PrintHelp()
 			break
 		case "/all":
 			fmt.Println("Send message to all", t)
-			SendAllMessage()
+			SendAllMessage(conn, username, t)
 			break
 		case "/to":
 			fmt.Println("Send message to", t)
+			SendSercetMessage(conn, username, t, message)
 			break
 		case "/exit":
 			fmt.Println("Bye!")
@@ -148,16 +149,16 @@ func SendMessageHandler(conn net.Conn, username string, isDisconnect chan bool) 
 func Run() {
 
 	isDisconnect := make(chan bool)
-	//	conn := InitClient()
-	//username, err := LoginClient(conn)
-	//if err != nil {
-	//	panic(err)
-	//}
-	//fmt.Println("Login successfully, welcome", username)
-	//go MessageLinster(conn, username, isDisconnect)
+	conn := InitClient()
+	username, err := LoginClient(conn)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Login successfully, welcome", username)
+	go MessageLinster(conn, username, isDisconnect)
 
 	// input host and port
-	go SendMessageHandler(isDisconnect)
+	go SendMessageHandler(conn, username, isDisconnect)
 	for <-isDisconnect != true {
 		break
 	}
