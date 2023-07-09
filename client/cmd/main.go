@@ -3,7 +3,7 @@ package main
 import "LinuxProgramDesign/client"
 
 func main() {
-	client.Run()
+	client.Display()
 	//	//client.Run()
 	//	reader := bufio.NewReader(os.Stdin)
 	//	fmt.Println("请输入：")
