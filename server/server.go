@@ -12,9 +12,10 @@ import (
 var message = make(chan []byte, 20)
 
 // 处理客户端连接请求
-func HandleConnect(conn net.Conn, onlineMap2 onlineMap, isAccept chan bool) {
+func HandleConnect(conn net.Conn, onlineMap2 onlineMap) {
 	defer conn.Close()
-	isAccept <- true
+	fmt.Println("[+]", "New connection ", conn.RemoteAddr().String())
+
 	// 登录处理
 	username, err := LoginHandler(conn)
 	if err != nil {
@@ -66,31 +67,30 @@ func Run(host string, port string, volume int) {
 	// 循环监听客户端连接请求
 
 	for {
-
 		conn, err := listener.Accept()
 		if err != nil {
-			panic(err)
+			fmt.Println("[-]", "Accept err:", err)
+			continue
 		}
-		isAccept := make(chan bool)
 
-		timeout := 3 * time.Second
-		go func() {
-			wp.Submit(
-				func() {
-					HandleConnect(conn, onlinemap, isAccept)
-				})
-		}()
+		var counter int = 0
+		for _ = range onlinemap.Clients {
+			counter++
+		}
 
-		// 使用select语句同时监听连接和超时信号
-		select {
-		case <-isAccept:
-			for {
-			}
-		case <-time.After(timeout):
-			// 超时，关闭连接
+		fmt.Println("[+]", "当前在线人数：", counter, "最大人数", volume)
+
+		if counter >= volume {
+
+			conn.Write(FULL_MESSAGE())
 			conn.Close()
-			return
+			continue
 		}
 
+		wp.Submit(
+			func() {
+				HandleConnect(conn, onlinemap)
+			})
 	}
+
 }

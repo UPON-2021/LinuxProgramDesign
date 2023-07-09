@@ -51,3 +51,15 @@ func NEW_USER_MESSAGE(username string) []byte {
 	}
 	return data
 }
+
+func FULL_MESSAGE() []byte {
+	fullMessage := protocol.Message{
+		Username: "Server",
+		Content:  "The chat room is full!",
+	}
+	data, err := protocol.SerializeData(fullMessage)
+	if err != nil {
+		return nil
+	}
+	return data
+}
