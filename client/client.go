@@ -1,6 +1,7 @@
 package client
 
 import (
+	"LinuxProgramDesign/protocol"
 	"fmt"
 	"net"
 )
@@ -29,17 +30,137 @@ func InitClient() net.Conn {
 
 }
 
-func LoginClient(conn net.Conn) {
+func LoginClient(conn net.Conn) (string, error) {
 	var name string
 	fmt.Println("Please input your name:")
 	fmt.Scanln(&name)
-	conn.Write([]byte(name))
+	if name == "Server" {
+		return "", fmt.Errorf("Name can't be Server")
+	}
+	login := protocol.Login{Username: name}
+	data, err := protocol.SerializeData(login)
+	if err != nil {
+		panic(err)
+	}
+	conn.Write(data)
+	loginmsg, err := ReadOnceMessage(conn)
+	if err != nil {
+		panic(err)
+	}
+
+	var serverMessage protocol.Status
+	protocol.UnserializeData(loginmsg, &serverMessage)
+	if serverMessage.Status != 0 {
+		return "", fmt.Errorf("Login failed")
+	}
+	return name, nil
+}
+
+func MessageLinster(conn net.Conn, username string, isDisconnect chan bool) {
+	buf := make([]byte, 2048)
+	for {
+		n, err := conn.Read(buf)
+		if err != nil {
+			fmt.Println("[Debug] -> MessageLinster", err)
+			return
+		}
+		if n == 0 {
+			continue
+		}
+		fmt.Println("[Debug] -> MessageLinster", string(buf[:n]))
+		error := MessageHandler(buf[:n], username, isDisconnect)
+		if error != nil {
+			PrintError(error)
+			//fmt.Println(error)
+		}
+	}
+}
+
+func MessageHandler(msg []byte, username string, isDisconnect chan bool) error {
+	var serverMessage protocol.SercetMessage
+	var message protocol.Message
+	error := protocol.UnserializeData(msg, &message)
+	if error != nil {
+		return error
+	}
+	if message.Username == "Server" {
+		PrintServerMessage(message.Content)
+		if message.Content == "Timeout!" {
+			isDisconnect <- true
+			return nil
+		}
+		return nil
+	}
+	error = protocol.UnserializeData(msg, &serverMessage)
+	if error != nil {
+		return error
+	}
+	//if serverMessage.UsernameFrom == "Server" {
+	//	fmt.Println(serverMessage.Content)
+	//	return nil
+	//}
+
+	if serverMessage.UsernameTo == "All" {
+		PrintAllmessage(serverMessage.UsernameFrom, serverMessage.Content)
+	}
+	if serverMessage.UsernameTo == username {
+		PrintSercetMessage(serverMessage.UsernameFrom, serverMessage.Content)
+	}
+	return nil
+}
+
+func SendMessageHandler(conn net.Conn, username string, isDisconnect chan bool) {
+	for {
+
+		var cmd, target, message string
+
+		fmt.Scanf("%s%s%s", &cmd, &target, &message)
+		c := cmd
+		t := target
+		//fmt.Println(c, "||", t)
+		//c, t, _ := parseString(cmd)
+
+		switch c {
+		case "": // 奇异的bug，不知如何产生的，就这么简单修修吧(
+			break
+		case "/help":
+			PrintHelp()
+			break
+		case "/all":
+			fmt.Println("Send message to all", t)
+			SendAllMessage(conn, username, t)
+			break
+		case "/to":
+			fmt.Println("Send message to", t)
+			SendSercetMessage(conn, username, t, message)
+			break
+		case "/exit":
+			fmt.Println("Bye!")
+			isDisconnect <- true
+			break
+		default:
+			PrintHelp()
+			break
+		}
+
+	}
 }
 
 func Run() {
-	Display()
-	//InitClient()
+
+	isDisconnect := make(chan bool)
+	conn := InitClient()
+	username, err := LoginClient(conn)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Login successfully, welcome", username)
+	go MessageLinster(conn, username, isDisconnect)
 
 	// input host and port
+	go SendMessageHandler(conn, username, isDisconnect)
+	for <-isDisconnect != true {
+		break
+	}
 
 }
