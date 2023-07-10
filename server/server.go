@@ -40,7 +40,7 @@ func HandleConnect(conn net.Conn, onlineMap2 onlineMap) {
 			DelMap(&onlineMap2, clnt.Name)
 			message <- msg
 			return
-		case <-time.After(60 * time.Second):
+		case <-time.After(300 * time.Second): // 超时检测
 			msg, _ := protocol.MakeMsg("[Server]", clnt.Name+" time out leave")
 			DelMap(&onlineMap2, clnt.Name)
 			message <- msg

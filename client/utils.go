@@ -71,3 +71,19 @@ func SendSercetMessage(conn net.Conn, username, to, message string) error {
 	}
 	return nil
 }
+
+func SendLeaveMessage(conn net.Conn, username string) error {
+	var msg protocol.SercetMessage
+	msg.UsernameFrom = "Server"
+	msg.UsernameTo = "All"
+	msg.Content = username + " leave the chatroom"
+	data, err := protocol.SerializeData(msg)
+	if err != nil {
+		return err
+	}
+	_, err = conn.Write(data)
+	if err != nil {
+		return err
+	}
+	return nil
+}

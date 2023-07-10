@@ -48,9 +48,14 @@ func UnserializeData(data []byte, target interface{}) error {
 }
 
 func MakeMsg(username, content string) ([]byte, error) {
-	var msg = Message{
-		Username: username,
-		Content:  content,
+	//var msg = Message{
+	//	Username: username,
+	//	Content:  content,
+	//}
+	var msg = SercetMessage{
+		UsernameFrom: "Server",
+		UsernameTo:   "All",
+		Content:      content,
 	}
 	data, err := SerializeData(msg)
 	if err != nil {

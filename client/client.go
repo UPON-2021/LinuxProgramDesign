@@ -121,7 +121,7 @@ func SendMessageHandler(conn net.Conn, username string, isDisconnect chan bool) 
 			fmt.Println("获取失败")
 		}
 
-		command := string(result)
+		command := string(result) + " " // 为了防止用户输入的命令不带参数，导致的数组越界
 		if command == "/exit" {
 			isDisconnect <- true
 			return
