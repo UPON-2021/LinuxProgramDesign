@@ -2,8 +2,11 @@ package client
 
 import (
 	"LinuxProgramDesign/protocol"
+	"bufio"
 	"fmt"
 	"net"
+	"os"
+	"strings"
 )
 
 type TcpClient struct {
@@ -61,13 +64,13 @@ func MessageLinster(conn net.Conn, username string, isDisconnect chan bool) {
 	for {
 		n, err := conn.Read(buf)
 		if err != nil {
-			fmt.Println("[Debug] -> MessageLinster", err)
+			//fmt.Println("[Debug] -> MessageLinster", err)
 			return
 		}
 		if n == 0 {
 			continue
 		}
-		fmt.Println("[Debug] -> MessageLinster", string(buf[:n]))
+		//fmt.Println("[Debug] -> MessageLinster", string(buf[:n]))
 		error := MessageHandler(buf[:n], username, isDisconnect)
 		if error != nil {
 			PrintError(error)
@@ -112,11 +115,24 @@ func MessageHandler(msg []byte, username string, isDisconnect chan bool) error {
 func SendMessageHandler(conn net.Conn, username string, isDisconnect chan bool) {
 	for {
 
-		var cmd, target, message string
+		reader := bufio.NewReader(os.Stdin)
+		result, _, err := reader.ReadLine()
+		if err != nil {
+			fmt.Println("获取失败")
+		}
 
-		fmt.Scanf("%s%s%s", &cmd, &target, &message)
-		c := cmd
-		t := target
+		command := string(result) + " " // 为了防止用户输入的命令不带参数，导致的数组越界
+		if command == "/exit" {
+			isDisconnect <- true
+			return
+		}
+
+		//var cmd, target, message string
+		_tmp := strings.SplitN(command, " ", 2)
+		c := _tmp[0]
+		t := _tmp[1]
+		//fmt.Scanf("%s%s%s", &cmd, &target, &message)
+
 		//fmt.Println(c, "||", t)
 		//c, t, _ := parseString(cmd)
 
@@ -127,12 +143,11 @@ func SendMessageHandler(conn net.Conn, username string, isDisconnect chan bool) 
 			PrintHelp()
 			break
 		case "/all":
-			fmt.Println("Send message to all", t)
 			SendAllMessage(conn, username, t)
 			break
 		case "/to":
-			fmt.Println("Send message to", t)
-			SendSercetMessage(conn, username, t, message)
+			a := strings.SplitN(t, " ", 2)
+			SendSercetMessage(conn, username, a[0], a[1])
 			break
 		case "/exit":
 			fmt.Println("Bye!")

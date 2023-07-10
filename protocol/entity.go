@@ -2,11 +2,6 @@ package protocol
 
 import "encoding/json"
 
-//	type User struct {
-//		Username string `json:"username"`
-//		UserIp   string `json:"user_ip"`
-//	}
-
 type Login struct {
 	Username string `json:"username"`
 }
@@ -48,9 +43,14 @@ func UnserializeData(data []byte, target interface{}) error {
 }
 
 func MakeMsg(username, content string) ([]byte, error) {
-	var msg = Message{
-		Username: username,
-		Content:  content,
+	//var msg = Message{
+	//	Username: username,
+	//	Content:  content,
+	//}
+	var msg = SercetMessage{
+		UsernameFrom: "Server",
+		UsernameTo:   "All",
+		Content:      content,
 	}
 	data, err := SerializeData(msg)
 	if err != nil {
