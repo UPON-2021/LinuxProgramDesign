@@ -2,11 +2,6 @@ package protocol
 
 import "encoding/json"
 
-//	type User struct {
-//		Username string `json:"username"`
-//		UserIp   string `json:"user_ip"`
-//	}
-
 type Login struct {
 	Username string `json:"username"`
 }
